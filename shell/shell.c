@@ -2,9 +2,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <sys/wait.h>
 
-int
-main(int argc, char **argv)
+int main(int argc, char **argv)
 {
     char *line = NULL;
     size_t linesize = 0;
@@ -22,22 +23,41 @@ main(int argc, char **argv)
         // if child, exec
         // if parent, wait
         int rc = fork();
-        if (rc < 0) {
+        if (rc < 0) 
+        {
             // fork failed; exit
             fprintf(stderr, "fork failed\n");
             exit(1);
-        } else if (rc == 0) {
+        }
+        else if (rc == 0) {
             // child (new process)
-            printf("hello, I am child (pid:%d)\n", (int) getpid());
-            printf("I want to exec\n");
-            sleep(1);
-        } else {
+            if(strncmp("path", line, 4) == 0)
+            {
+                char *myargs[2];
+                myargs[0] = strdup("path");
+                myargs[1] = NULL;
+
+                execv(myargs[0], myargs);
+            }
+            else if(strncmp("cd", line, 2) == 0)
+            {
+                char *myargs[2];
+                myargs[0] = strdup("cd");
+                myargs[1] = NULL;
+
+                execv(myargs[0], myargs);
+            }
+            // sleep(1);
+            
+            printf("Not a valid command.\n");
+        }
+        else 
+        {
             // parent goes down this path (original process)
             // int wc = wait(NULL);
-            printf("hello, I am parent of %d (pid:%d)\n",
-                rc, (int) getpid());
+            //printf("Hello, I am parent of %d (pid:%d)\n", rc, (int) getpid());
             wait(NULL);
-            printf("parent finished.\n");
+            //printf("Parent finished.\n");
         }
     }
 
