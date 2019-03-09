@@ -14,18 +14,59 @@ int main(int argc, char **argv)
     size_t linesize = 0;
     ssize_t linelen;
 
+    /* Develop built in commands:
+        1. exit
+        2. path
+        3. cd
+    
+        exit:
+            When the user types 
+
+                                    exit
+
+            your shell should simply call the exit system call with 0 
+            as a parameter. It is an error to pass any arguments to exit.
+
+        path:
+            The path command takes 0 or more arguments, 
+            with each argument separated by whitespace from the others. 
+            A typical usage would be like this: 
+
+                            wish> path /bin /usr/bin
+
+            this would add '/bin' and '/usr/bin' to the search path of the shell.
+
+            If the user sets path to be empty, then the shell should not be able 
+            to run any programs (except built-in commands). 
+            The path command always overwrites the old path with the newly specified path.
+
+        cd:
+            cd always take one argument (0 or >1 args should be signaled as an error). 
+            To change directories, use the chdir() system call with the argument supplied 
+            by the user; 
+            if chdir fails, that is also an error.
+
+
+        Process Steps: 
+            1. Fork
+            2. Child or Parent?
+                A: Child 
+                    Determine 'path' or 'cd' command
+                    Save user arguments
+                    Exec()
+                B: Parent
+                    End process
+    */
+    
     while ((linelen = getline(&line, &linesize, stdin)) != -1) 
     {
-        printf("line: %s", line);
+        // Handle "exit" command
         if (strncmp("exit", line, 4) == 0) 
         {
-            exit(0); // user wants to exit
+            exit(0);
         }
         
         // fwrite(line, linelen, 1, stdout);
-        // fork
-        // if child, exec
-        // if parent, wait
         int rc = fork();
         if (rc < 0) 
         {
@@ -56,20 +97,36 @@ int main(int argc, char **argv)
                 printf("path line: %s", line);
                 int command_size = getCommandSize(line);
 
-                char *myargs[command_size + 1];
-                getArgList(myargs, line, command_size);
+                if(command_size < 1)
+                {
+                    printf("command size < 1\n");
+                }
+                else
+                {
+                    char *myargs[command_size + 1];
+                    getArgList(myargs, line, command_size);
 
-                execv(myargs[0], myargs);
+                    execv(myargs[0], myargs);
+                }
             }
 
             // user input 'cd' command
             else if(strncmp("cd", line, 2) == 0)
             {
-                char *myargs[2];
-                myargs[0] = strdup("cd");
-                myargs[1] = NULL;
+                printf("cd line: %s", line);
+                int command_size = getCommandSize(line);
 
-                execv(myargs[0], myargs);
+                if(command_size < 1 || command_size > 1)
+                {
+                    printf("command size < 1\n");
+                }
+                else
+                {
+                    char *myargs[3];
+                    getArgList(myargs, line, command_size);
+
+                    execv(myargs[0], myargs);
+                }
             }
             else
             {
@@ -78,10 +135,8 @@ int main(int argc, char **argv)
         }
         else 
         {
-            // parent goes down this path (original process)
             //printf("Hello, I am parent of %d (pid:%d)\n", rc, (int) getpid());
             wait(NULL);
-            //printf("Parent finished.\n");
         }
     }
 
