@@ -8,6 +8,8 @@
 int getCommandSize(char *line);
 void getArgList(char* argList[], char *line, int command_size);
 
+char *globalPath;
+
 int main(int argc, char **argv)
 {
     char *line = NULL;
@@ -57,7 +59,7 @@ int main(int argc, char **argv)
                 B: Parent
                     End process
     */
-    
+    printf("CShell> ");
     while ((linelen = getline(&line, &linesize, stdin)) != -1) 
     {
         // Handle "exit" command
@@ -74,7 +76,8 @@ int main(int argc, char **argv)
             fprintf(stderr, "fork failed\n");
             exit(1);
         }
-        else if (rc == 0) {
+        else if (rc == 0) 
+        {
             // IT IS CHILD PROCESS
 
             // user input 'path' command
@@ -84,13 +87,13 @@ int main(int argc, char **argv)
             //          - call 'path' command
             //          - pass argument list
 
-            // EX)  path ls cd exit
+            // EX)  path /bin /bin/usr /bin/temp
 
             //      char *myargs[5];
             //      myargs[0] = "path"
-            //      myargs[1] = "ls"     
-            //      myargs[2] = "cd"
-            //      myargs[3] = "exit"
+            //      myargs[1] = "/bin"     
+            //      myargs[2] = "/bin/usr"
+            //      myargs[3] = "/bin/temp"
             //      myargs[4] = NULL
             if(strncmp("path", line, 4) == 0)
             {
@@ -130,6 +133,31 @@ int main(int argc, char **argv)
             }
             else
             {
+                char *path = strtok(getenv("PATH"), ":");
+                printf("path: %s\n", path);
+                char checkPath[strlen(path)];
+                checkPath = *path;
+                checkPath[strlen(path)] = '/';
+                printf("checkPath: %s, strlen: %d\n", checkPath, strlen(checkPath));
+                // // int len = strlen(checkPath);
+                // // checkPath[len] = '/';
+                // // printf("checkPath: %s, strlen: %d\n", checkPath, strlen(checkPath));
+                // checkPath = strcat(checkPath, line);
+                while(path != NULL)
+                {
+                    printf("path: %s\n", path);
+                    // if(access(strcat(checkPath, line), X_OK))
+                    // {
+                    //     printf("it's okay. it worked. path: %s\n", checkPath);
+                    // }
+                    // else
+                    // {
+                    //     printf("access didn't work\n");
+                    // }
+                    // *checkPath = strcat(path, '/');
+                    // checkPath = strcat(checkPath, line);
+                    path = strtok(NULL, ":");
+                }
                 printf("%.*s is not a valid command.\n", (int)strlen(line)-1, line);
             }
         }
@@ -137,7 +165,10 @@ int main(int argc, char **argv)
         {
             //printf("Hello, I am parent of %d (pid:%d)\n", rc, (int) getpid());
             wait(NULL);
+            char wd[100];
+            printf("PARENT. path: %s", getcwd(wd, 100));
         }
+        printf("CShell> ");
     }
 
     free(line);

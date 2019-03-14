@@ -55,4 +55,6 @@ int main(int argc, char *argv[])
         }
         printf("chdir success. path: %s", getcwd(wd, 100));
     }
+
+    printf("CShell> ");
 }
