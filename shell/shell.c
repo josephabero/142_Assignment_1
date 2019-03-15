@@ -5,17 +5,10 @@
 #include <unistd.h>
 #include <sys/wait.h>
 
-int getCommandSize(char *line);
-void getArgList(char* argList[], char *line, int command_size);
-
 char *globalPath;
 
 int main(int argc, char **argv)
 {
-    char *line = NULL;
-    size_t linesize = 0;
-    ssize_t linelen;
-
     /* Develop built in commands:
         1. exit
         2. path
@@ -59,114 +52,183 @@ int main(int argc, char **argv)
                 B: Parent
                     End process
     */
+
+    /* variables used to store user_input from shell
+
+        EX) CShell> path /bin /bin/usr
+
+        line = "path /bin /bin/usr"
+    */
+    char *line = NULL;
+    size_t linesize = 0;
+    ssize_t linelen;
+
     printf("CShell> ");
     while ((linelen = getline(&line, &linesize, stdin)) != -1) 
     {
-        // Handle "exit" command
+        // Handles "exit" command
         if (strncmp("exit", line, 4) == 0) 
         {
             exit(0);
         }
         
-        // fwrite(line, linelen, 1, stdout);
+        
         int rc = fork();
+
+        // FORK failed, EXIT with error
         if (rc < 0) 
         {
-            // fork failed; exit
             fprintf(stderr, "fork failed\n");
             exit(1);
         }
+        // This is a CHILD PROCESS
         else if (rc == 0) 
         {
-            // IT IS CHILD PROCESS
-
-            // user input 'path' command
-            // 1. parse number of command line arguments
-            // 2. retrieve command list and store in array
-            // 3. execv()
-            //          - call 'path' command
-            //          - pass argument list
-
-            // EX)  path /bin /bin/usr /bin/temp
-
-            //      char *myargs[5];
-            //      myargs[0] = "path"
-            //      myargs[1] = "/bin"     
-            //      myargs[2] = "/bin/usr"
-            //      myargs[3] = "/bin/temp"
-            //      myargs[4] = NULL
+            // User input 'path command'
             if(strncmp("path", line, 4) == 0)
             {
-                printf("path line: %s", line);
-                int command_size = getCommandSize(line);
+                /*
+                    'path' function
+                    ---------------
+                    Description:
+                        globalPath variable is STORED from user arguments.
+                        globalPath is used by other commands to check if command definition exists.
 
-                if(command_size < 1)
-                {
-                    printf("command size < 1\n");
-                }
-                else
-                {
-                    char *myargs[command_size + 1];
-                    getArgList(myargs, line, command_size);
+                    1) CShell> path /bin /bin/usr
 
-                    execv(myargs[0], myargs);
-                }
+                    GOAL:
+
+                        globalPath = "/bin /bin/usr"
+                
+                    2) CShell> path
+
+                    GOAL:
+
+                        globalPath = ""
+
+                        NOTE: non-user defined commands should NOT work. 
+                              (only 'path', 'cd', and 'exit' commands should work with EMPTY path)
+                */
+                printf("'path' command! LINE: %s", line);
+                /*
+                    YOUR CODE GOES HERE
+                */
             }
 
             // user input 'cd' command
             else if(strncmp("cd", line, 2) == 0)
             {
-                printf("cd line: %s", line);
-                int command_size = getCommandSize(line);
+                /*
+                    'cd' function
+                    ---------------
+                    Description:
+                        cd sets working directory of shell.
+                        working directory is the CURRENT folder you are in while using the shell
 
-                if(command_size < 1 || command_size > 1)
-                {
-                    printf("command size < 1\n");
-                }
-                else
-                {
-                    char *myargs[3];
-                    getArgList(myargs, line, command_size);
+                        NOTE: working directory is DIFFERENT from globalPath variable!
+                            working directory is what commands like 'ls' will work in reference to. 
+                            globalPath will hold all usable paths and is used to check if commands exist. 
 
-                    execv(myargs[0], myargs);
-                }
+                        'cd' command MUST only use 1 argument!
+                        
+
+                    Functionality:
+                        EX) /mnt/c/142_Assignment_1/shell
+
+                        1) CShell> cd /bin
+
+                        GOAL:
+
+                            IF /bin exists, set working directory to /bin
+
+                        2) CShell> cd /path/that/does/not/exist
+
+                        GOAL:
+
+                            path is not real, do NOT change working directory
+
+                        
+
+
+                        HINT STEPS:
+                            1. When processing command, remove 'cd ' from line input variable
+                                EX) cd /bin
+
+                                    store '/bin' in temp variable
+
+                            2. Use access() command to check if variable exists
+
+                                EX) access(//..temp variable with path..//, X_OK)
+
+                                manual page is linked here: https://linux.die.net/man/2/access
+
+                                if access(...) == 0, path exists
+                                else, path does not exist
+
+                            3. Use chdir() command to change working directory to valid path
+
+                                EX) chdir(//..temp variable with path..//)
+
+                                manual page linked here: http://man7.org/linux/man-pages/man2/chdir.2.html
+
+                                if chdir(...) == 0, working directory was changed
+                                else, changing directory failed
+
+                            4. Print current working directory
+
+                                Explanation: https://stackoverflow.com/questions/298510/how-to-get-the-current-directory-in-a-c-program
+                */
+                printf("'cd' command! LINE: %s", line);
+                /*
+                    YOUR CODE GOES HERE
+                */
             }
+            /*
+                Non-Built-In Command was input
+
+                EX) CShell> ls
+
+                EX) CShell> mkdir newFolder/
+
+                    NOTE: expected to perform function of valid commands
+
+                EX) CShell> command_that_doesnt_exist
+
+                    NOTE: expected to print ERROR message that command doesn't exist
+            */
             else
             {
-                char *path = strtok(getenv("PATH"), ":");
-                printf("path: %s\n", path);
-                char checkPath[strlen(path)];
-                checkPath = *path;
-                checkPath[strlen(path)] = '/';
-                printf("checkPath: %s, strlen: %d\n", checkPath, strlen(checkPath));
-                // // int len = strlen(checkPath);
-                // // checkPath[len] = '/';
-                // // printf("checkPath: %s, strlen: %d\n", checkPath, strlen(checkPath));
-                // checkPath = strcat(checkPath, line);
-                while(path != NULL)
-                {
-                    printf("path: %s\n", path);
-                    // if(access(strcat(checkPath, line), X_OK))
-                    // {
-                    //     printf("it's okay. it worked. path: %s\n", checkPath);
-                    // }
-                    // else
-                    // {
-                    //     printf("access didn't work\n");
-                    // }
-                    // *checkPath = strcat(path, '/');
-                    // checkPath = strcat(checkPath, line);
-                    path = strtok(NULL, ":");
-                }
-                printf("%.*s is not a valid command.\n", (int)strlen(line)-1, line);
+                printf("NOT a built in command! LINE: %s", line);
+                /*
+                    Almost any command will use this
+                    ---------------------------------
+                    
+                    globalPath will be used to check if command exists in a directory.
+                    
+                    GOAL:
+                    
+                        if command exists, exec() and execute the command with its arguments
+                        else, print ERROR message
+
+                    HINT steps for code within this ELSE statement:
+                        1. Use execvp()
+
+                            execvp("newCommand", line);
+
+                            WHAT THIS DOES:
+                                Creates new process executing 'newCommand' and passes in line (the user input) as an argument
+                                (This assumes you built 'newCommand' with gcc)
+                */
+                char *myargs[1];
+                myargs[0] = line;
+                execv("newCommand", myargs);
             }
         }
         else 
         {
-            //printf("Hello, I am parent of %d (pid:%d)\n", rc, (int) getpid());
             wait(NULL);
             char wd[100];
-            printf("PARENT. path: %s", getcwd(wd, 100));
+            printf("PARENT. path: %s\n", getcwd(wd, 100));
         }
         printf("CShell> ");
     }
@@ -176,27 +238,4 @@ int main(int argc, char **argv)
     {
         err(1, "getline");
     }
-}
-
-int getCommandSize(char *line)
-{
-    int command_size = 0;
-    for(int i = 0; i < strlen(line); i++)
-    {
-        if(line[i] == ' ') command_size++;
-    }
-    printf("command_size: %d\n", command_size + 1);
-    return command_size;
-}
-void getArgList(char *argList[], char *line, int command_size)
-{
-    char *temp;
-    temp = strtok(line, " ");
-    for(int j = 0; j <= command_size; j++)
-    {
-        printf("temp: %s\n", temp);
-        argList[j] = temp;
-        temp = strtok(NULL, " ");
-    }
-    argList[command_size + 1] = NULL;
 }
