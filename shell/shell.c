@@ -12,7 +12,7 @@ void getArgList(char* argList[], char *line, int command_size);
 int getNumberOfPaths(char *line);
 void getEachPath(char* argList[], char *line, int command_size);
 
-void newCommand(char paths[]);
+void newCommand(char *paths[]);
 
 char globalPath[1000];
 
@@ -138,28 +138,27 @@ int main(int argc, char **argv)
             else
             {
                 printf("new command\n");
-                // int command_size = getCommandSize(line);
+                int command_size = getCommandSize(line);
 
-                // char *myargs[command_size + 2];
-                // getArgList(myargs, line, command_size);
+                char *myargs[command_size + 2];
+                getArgList(myargs, line, command_size);
                 // // myargs[command_size + 1] = globalPath;
                 // // myargs[command_size + 2] = NULL;
 
                 // // printf("command %s returned %i\n", line, execv("newCommand", myargs));
 
-                // newCommand(myargs);
+                newCommand(myargs);
             }
-            printf("end of child\n");
-            break;
+            // printf("end of child\n");
         }
         else 
         {
             //printf("Hello, I am parent of %d (pid:%d)\n", rc, (int) getpid());
             wait(NULL);
-            printf("parent\n");
-            char working_directory[1000];
-            getcwd(working_directory, sizeof(working_directory));
-            printf("wd: %s\n", working_directory);
+            // printf("parent\n");
+            // char working_directory[1000];
+            // getcwd(working_directory, sizeof(working_directory));
+            // printf("wd: %s\n", working_directory);
         }
         printf("CShell> ");
     }
@@ -197,84 +196,102 @@ void getArgList(char *argList[], char *line, int command_size)
     argList[command_size + 1] = NULL;
 }
 
-// int getNumberOfPaths(char *line)
-// {
-//     int command_size = 0;
-//     for(int i = 0; i < strlen(line); i++)
-//     {
-//         if(line[i] == ' ') command_size++;
-//     }
-//     //printf("command_size: %d\n", command_size + 1);
-//     return command_size;
-// }
-// void getEachPath(char *argList[], char *line, int command_size)
-// {
-//     char *temp;
-//     temp = strtok(line, " ");
-//     for(int j = 0; j <= command_size; j++)
-//     {
-//         //printf("temp: %s\n", temp);
-//         argList[j] = temp;
-//         temp = strtok(NULL, " ");
-//     }
-//     argList[command_size + 1] = NULL;
-// }
+int getNumberOfPaths(char *line)
+{
+    printf("getNumberOfPaths line: %s\n", line);
+    int command_size = 0;
+    for(int i = 0; i < strlen(line); i++)
+    {
+        if(line[i] == ' ') command_size++;
+    }
+    //printf("command_size: %d\n", command_size + 1);
+    return command_size;
+}
 
-// void newCommand()
-// {
-//     // global path is stored in the last element of argv array
-//     // char *global_path = argv[argc - 1];
+void getEachPath(char *argList[], char *line, int command_size)
+{
+    char *temp;
+    temp = strtok(line, " ");
+    for(int j = 0; j <= command_size; j++)
+    {
+        //printf("temp: %s\n", temp);
+        argList[j] = temp;
+        temp = strtok(NULL, " ");
+    }
+    argList[command_size + 1] = NULL;
+}
 
-
-//     printf("path: provides path to commands.\n");
-//     // printf("arguments: %d\n", argc);
-//     // printf("global_path: %s\n", global_path);
-
-//     // for(int i = 0; i < argc; i++)
-//     // {
-//     //     printf("argument #%d: %s\n", i, argv[i]);
-//     // }
-
-//     int num_of_paths = getNumberOfPaths(global_path);
-//     char *path_list[num_of_paths + 1];
-
-//     // Stores each path in 'path_list'
-//     getEachPath(path_list, global_path, num_of_paths);
-
-//     // create argument array with number of paths to iterate through
-//     char *myargs[num_of_paths];
-
-//     // path pointer with memory allocated based on the length of the string
-//     char *pathToCheck = (char *)malloc((sizeof(path_list)/sizeof(path_list[0])) + strlen(argv[0]) + 2);
-
-//     // local variables to be used in process
-//     char working_directory[1000];
-//     getcwd(working_directory, sizeof(working_directory));
-//     bool valid_command = false;
+void newCommand(char *paths[])
+{
+    // global path is stored in the last element of argv array
+    // char *global_path = argv[argc - 1];
 
 
-//     for(int i=0; i <= num_of_paths; i++)
-//     {
-//         printf("path to check: %s/%s\n", path_list[i], argv[0]);
-//         strcpy(pathToCheck, path_list[i]);
-//         printf("pathToCheckFirst: %s\n", pathToCheck);
-//         strcat(pathToCheck, "/");
-//         strcat(pathToCheck, argv[0]);
-//         printf("pathToCheck: %s\n", pathToCheck);
-//         myargs[0] = working_directory;
+    // printf("path: provides path to commands.\n");
 
-//         if(access(pathToCheck, X_OK) == 0)
-//         {
-//             printf("Valid Address %s\n", pathToCheck);
-//             execvp(pathToCheck, myargs);
-//             valid_command = true;
-//             break;
-//         }
-//         strcpy(pathToCheck, "");
-//     }
+    // Gets numbers of paths
+    // Ex) globalPath = '/bin /usr /temp'
+    //     num_of_paths = 2     (includes 0)
+    int num_of_paths = getNumberOfPaths(globalPath);
+    // printf("num_of_paths: %i\n", num_of_paths);
 
-//     if(!valid_command)
-//     {
-//         printf("NOT A VALID COMMAND\n");
-//     }    
-// }
+    // Creates char* array holding each path
+    // Ex) 
+    //      path_list[0] = '/bin'
+    //      path_list[1] = '/usr'
+    //      path_list[2] = '/temp'
+    char *path_list[num_of_paths + 1];
+    getEachPath(path_list, globalPath, num_of_paths);
+    for(int i=0; i < num_of_paths + 1; i++)
+    {
+        printf("path_list[%i]: %s\n", i, path_list[i]);   
+    }
+
+    // path pointer with memory allocated based on the length of the string
+    char *pathToCheck = (char *)malloc((sizeof(path_list)/sizeof(path_list[0])) + strlen(globalPath) + 2);
+   
+
+    // local variables to be used in process
+    char working_directory[1000];
+    getcwd(working_directory, sizeof(working_directory));
+    bool valid_command = false;
+
+    // iterates through each path and checks to see if it's a valid path.
+    // if path exists, then it exec() to execute command
+    // else, it will iterate through the next path
+
+    // if all paths are invalid, error message will be displayed.
+
+    // Example
+    // -------
+    // CShell> path /bin /usr/ temp
+    // CShell> ls
+
+    // pathToCheck = '/bin'
+    // pathToCheck = '/bin/'
+    // pathToCheck = '/bin/ls'
+    // Does '/bin/ls' exist?
+    // Yes, execute command
+    for(int i=0; i <= num_of_paths; i++)
+    {
+        // printf("path to check: %s/%s\n", path_list[i], paths[0]);
+        strcpy(pathToCheck, path_list[i]);
+        // printf("pathToCheckFirst: %s\n", pathToCheck);
+        strcat(pathToCheck, "/");
+        strcat(pathToCheck, paths[0]);
+        // printf("pathToCheck: %s\n", pathToCheck);
+        // paths[0] = working_directory;
+
+        if(access(pathToCheck, X_OK) == 0)
+        {
+            execv(pathToCheck, paths); // creates new process to execute command program. passes in arguments
+            valid_command = true;
+            break;
+        }
+    }
+
+    if(!valid_command)
+    {
+        printf("NOT A VALID COMMAND\n");
+    }    
+}
