@@ -4,6 +4,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdbool.h>
+#include <fcntl.h>
 #include <sys/wait.h>
 
 int getCommandSize(char *line);
@@ -19,11 +20,13 @@ char globalPath[1000];
 int main(int argc, char **argv)
 {
     strcpy(globalPath, "/bin");
-    char error_message[30] = "An error has occurred.\n";
+    char error_message[30] = "An error has occurred\n";
     char *line = NULL;
     size_t linesize = 0;
     ssize_t linelen;
 
+    char *redir_location;
+    char *out_file_name;
 
     bool exit_cond = false;
 
@@ -74,6 +77,7 @@ int main(int argc, char **argv)
     while ((linelen = getline(&line, &linesize, stdin)) != -1) 
     {
         line = strtok(line, "\n");
+
         // Handle "exit" command
         if (strncmp("exit", line, 4) == 0) 
         {
@@ -134,6 +138,26 @@ int main(int argc, char **argv)
                 //      myargs[2] = "/bin/usr"
                 //      myargs[3] = "/bin/temp"
                 //      myargs[4] = NULL
+
+                if((redir_location = strchr(line, '>')) != NULL)
+                {
+                    strcpy(out_file_name, redir_location);
+                    out_file_name += 2;
+        
+                    close(STDOUT_FILENO);
+        
+                    int out = open(out_file_name, O_WRONLY | O_CREAT);
+                    if (out == -1) {
+                        perror("open:");
+                        return -1;
+                    }
+                    int r;
+                    fflush(stdout);
+                    dup2(out, STDOUT_FILENO);
+                    
+                    *redir_location = '\0';
+                    // printf("line: %s\n", line);
+                }
                 int command_size = getCommandSize(line);
 
                 char *myargs[command_size + 2];
