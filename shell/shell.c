@@ -19,6 +19,7 @@ char globalPath[1000];
 int main(int argc, char **argv)
 {
     strcpy(globalPath, "/bin");
+    char error_message[30] = "An error has occurred.\n";
     char *line = NULL;
     size_t linesize = 0;
     ssize_t linelen;
@@ -72,6 +73,7 @@ int main(int argc, char **argv)
     printf("CShell> ");
     while ((linelen = getline(&line, &linesize, stdin)) != -1) 
     {
+        line = strtok(line, "\n");
         // Handle "exit" command
         if (strncmp("exit", line, 4) == 0) 
         {
@@ -79,62 +81,59 @@ int main(int argc, char **argv)
             exit(0);
             break;
         }
-        
-        // fwrite(line, linelen, 1, stdout);
-        int rc = fork();
-        if (rc < 0) 
+        else if(strncmp("path", line, 4) == 0)
         {
-            // fork failed; exit
-            fprintf(stderr, "fork failed\n");
-            exit(0);
+            char *temp = line;
+            int i = 0;
+            temp += 5;
+            strcpy(globalPath, temp);
+            printf("New Global Path: %s\n", globalPath);
         }
-        else if (rc == 0) 
+        // user input 'cd' command
+        else if(strncmp("cd", line, 2) == 0)
         {
-            line = strtok(line, "\n");
-            // IT IS CHILD PROCESS
-
-            // user input 'path' command
-            // 1. parse number of command line arguments
-            // 2. retrieve command list and store in array
-            // 3. execv()
-            //          - call 'path' command
-            //          - pass argument list
-
-            // EX)  path /bin /bin/usr /bin/temp
-
-            //      char *myargs[5];
-            //      myargs[0] = "path"
-            //      myargs[1] = "/bin"     
-            //      myargs[2] = "/bin/usr"
-            //      myargs[3] = "/bin/temp"
-            //      myargs[4] = NULL
-            if(strncmp("path", line, 4) == 0)
+            char *temp;
+            temp = line + 3;              // removes 'cd ' from temp
+            if(access(temp, F_OK) == 0)
             {
-                char *temp = line;
-                int i = 0;
-                temp += 5;
-                strcpy(globalPath, temp);
-                printf("New Global Path: %s\n", globalPath);
-            }
-
-            // user input 'cd' command
-            else if(strncmp("cd", line, 2) == 0)
-            {
-                char *temp;
-                temp = line + 3;              // removes 'cd ' from temp
-                if(access(temp, F_OK) == 0)
-                {
-                    chdir(temp);
-                }
-                else
-                {
-                    printf("Path DOES NOT exist. %s\n", temp);
-                }
+                chdir(temp);
                 char cwd[1000];
                 printf("Current Directory: %s\n", getcwd(cwd, sizeof(cwd)));
             }
             else
             {
+                write(STDERR_FILENO, error_message, strlen(error_message)); 
+            }
+        }
+        else
+        {
+            // fwrite(line, linelen, 1, stdout);
+            int rc = fork();
+            if (rc < 0) 
+            {
+                // fork failed; exit
+                write(STDERR_FILENO, error_message, strlen(error_message)); 
+                exit(0);
+            }
+            else if (rc == 0) 
+            {
+                // IT IS CHILD PROCESS
+
+                // user input 'path' command
+                // 1. parse number of command line arguments
+                // 2. retrieve command list and store in array
+                // 3. execv()
+                //          - call 'path' command
+                //          - pass argument list
+
+                // EX)  path /bin /bin/usr /bin/temp
+
+                //      char *myargs[5];
+                //      myargs[0] = "path"
+                //      myargs[1] = "/bin"     
+                //      myargs[2] = "/bin/usr"
+                //      myargs[3] = "/bin/temp"
+                //      myargs[4] = NULL
                 int command_size = getCommandSize(line);
 
                 char *myargs[command_size + 2];
@@ -142,18 +141,18 @@ int main(int argc, char **argv)
 
                 if(newCommand(myargs))
                 {
-                    printf("INVALID COMMAND\n");
+                    char error_message[30] = "An error has occurred.\n";
                 }
             }
-        }
-        else 
-        {
-            //printf("Hello, I am parent of %d (pid:%d)\n", rc, (int) getpid());
-            wait(NULL);
-            // printf("parent\n");
-            // char working_directory[1000];
-            // getcwd(working_directory, sizeof(working_directory));
-            // printf("wd: %s\n", working_directory);
+            else 
+            {
+                //printf("Hello, I am parent of %d (pid:%d)\n", rc, (int) getpid());
+                wait(NULL);
+                // printf("parent\n");
+                // char working_directory[1000];
+                // getcwd(working_directory, sizeof(working_directory));
+                // printf("wd: %s\n", working_directory);
+            }
         }
         printf("CShell> ");
     }
