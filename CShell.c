@@ -32,17 +32,18 @@ int main(int argc, char **argv)
     //interactive mode
     if (argc == 1){
         printf("In interactive mode\n");
-        goto interactive;
+        goto interactive; //continue to user inputting cmd
     }
     //batch mode
     else if (argc == 2){
         printf("In batch mode\n");
         char *filename = strdup(argv[1]);
-        file = fopen(filename, "r");
-        if (file == NULL){
+        file = fopen(filename, "r"); //opens file in read mode ("r")
+        if (file == NULL){ 
             write(STDERR_FILENO, error_message, strlen(error_message));
-            exit(0); 
+            exit(0); //if file doesn't exist, returns null to print out error
         }
+        printf("Successful file open but what do now\n");
     }
     else{
         write(STDERR_FILENO, error_message, strlen(error_message));
