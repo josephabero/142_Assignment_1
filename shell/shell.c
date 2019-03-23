@@ -66,7 +66,9 @@ int main(int argc, char **argv)
     printf("CShell> ");
     while ((linelen = getline(&line, &linesize, stdin)) != -1) 
     {
+       line = strtok(line,"\n");
         // Handles "exit" command
+
         if (strncmp("exit", line, 4) == 0) 
         {
             exit(0);
@@ -110,9 +112,8 @@ int main(int argc, char **argv)
                               (only 'path', 'cd', and 'exit' commands should work with EMPTY path)
                 */
                 printf("'path' command! LINE: %s", line);
-                /*
-                    YOUR CODE GOES HERE
-                */
+         		globalPath = line + 5;
+         		printf("globalPath: %s", globalPath);
             }
 
             // user input 'cd' command
@@ -179,9 +180,39 @@ int main(int argc, char **argv)
                                 Explanation: https://stackoverflow.com/questions/298510/how-to-get-the-current-directory-in-a-c-program
                 */
                 printf("'cd' command! LINE: %s", line);
-                /*
-                    YOUR CODE GOES HERE
-                */
+               // char *temp;
+
+               // temp = line +3;
+               // char s[100];
+
+               // if(access(temp,F_OK)==0){
+               // 	printf("Path exists");
+               // 	chdir(temp);
+               // 	if(chdir(temp)==0){
+               // 		printf("Current Directory: %s\n",getcwd(s,sizeof(s)));
+               // 	}
+               // 	else{
+               // 		printf("Changing directory failed.");
+               // 	}
+               // }
+               // else{
+               // 	printf("Path does not exist.");
+               // }
+                               char *temp;
+                temp = line + 3;              // removes 'cd ' from temp
+                //printf("cd line: %s, globalPath: %s\n", temp, globalPath);
+                if(access(temp, F_OK) == 0)
+                {
+                    //printf("Path exists. cd to %s\n", temp);
+                    chdir(temp);
+                }
+                else
+                {
+                    printf("Path DOES NOT exist. %s\n", temp);
+                }
+                char cwd[1000];
+                printf("Current Directory: %s\n", getcwd(cwd, sizeof(cwd)));
+
             }
             /*
                 Non-Built-In Command was input
