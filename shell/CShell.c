@@ -7,28 +7,27 @@
 #include <fcntl.h>
 #include <sys/wait.h>
 
-int getCommandSize(char *line);
-void getArgList(char* argList[], char *line, int command_size);
+void getEachPath(char* argList[], char *line, int command_size);
 
 int getNumberOfPaths(char *line);
-void getEachPath(char* argList[], char *line, int command_size);
 
 int newCommand(char *paths[]);
 
 char globalPath[1000];
 
+void getParallelCommands(char* argList[], char *line, int command_size);
+int getNumberOfParallelCommands(char *line);
+
 int main(int argc, char **argv)
 {
+
     strcpy(globalPath, "/bin");
     char error_message[30] = "An error has occurred\n";
     char *line = NULL;
     size_t linesize = 0;
     ssize_t linelen;
 
-    char *redir_location;
-    char *out_file_name;
-
-    bool exit_cond = false;
+    char *parallel_input_check;
 
     /* Develop built in commands:
         1. exit
@@ -76,14 +75,27 @@ int main(int argc, char **argv)
     printf("CShell> ");
     while ((linelen = getline(&line, &linesize, stdin)) != -1) 
     {
+        // Removes newline character from user pressing Enter
         line = strtok(line, "\n");
 
-        // Handle "exit" command
+        // PARALLEL TRY
+        if((parallel_input_check = strchr(line, '&')) != NULL)
+        {
+            int parallel_size = getNumberOfParallelCommands(line);
+            printf("parallel_size: %i\n", parallel_size);
+            char *commandList[parallel_size];
+            getParallelCommands(commandList, line, parallel_size);
+            printf("PARSING PARALLEL COMMANDS\n");
+            for(int i=0; i <= parallel_size; i++)
+            {
+                printf("commandList[%i]: %s\n", i, commandList[i]);
+            }   
+        } 
+
+        // Handle BUILT IN COMMANDS
         if (strncmp("exit", line, 4) == 0) 
         {
-            exit_cond = true;
             exit(0);
-            break;
         }
         else if(strncmp("path", line, 4) == 0)
         {
@@ -93,7 +105,6 @@ int main(int argc, char **argv)
             strcpy(globalPath, temp);
             printf("New Global Path: %s\n", globalPath);
         }
-        // user input 'cd' command
         else if(strncmp("cd", line, 2) == 0)
         {
             char *temp;
@@ -106,12 +117,13 @@ int main(int argc, char **argv)
             }
             else
             {
-                write(STDERR_FILENO, error_message, strlen(error_message)); 
+                write(STDERR_FILENO, error_message, strlen(error_message));
             }
         }
+
+        // HANDLE NON BUILT IN COMMANDS
         else
         {
-            // fwrite(line, linelen, 1, stdout);
             int rc = fork();
             if (rc < 0) 
             {
@@ -121,6 +133,9 @@ int main(int argc, char **argv)
             }
             else if (rc == 0) 
             {
+                char *redir_location;
+                char *parallel_location;
+                
                 // IT IS CHILD PROCESS
 
                 // user input 'path' command
@@ -139,33 +154,63 @@ int main(int argc, char **argv)
                 //      myargs[3] = "/bin/temp"
                 //      myargs[4] = NULL
 
+                // REDIRECTION
+                // checks if '>' exists within user input command
+                //
+                // strchr() returns pointer to location where '>' is
+                //
+                // EX) CShell> ls > output.txt
+                //
+                //             line             = 'ls > output.txt'
+                //             redir_location   = '> output.txt'
                 if((redir_location = strchr(line, '>')) != NULL)
                 {
+                    char *out_file_name;
+                    // FROM EX) out_file_name = 'output.txt'
                     strcpy(out_file_name, redir_location);
                     out_file_name += 2;
         
-                    close(STDOUT_FILENO);
+                    printf("outfile: %s\n", out_file_name);
+
+                    // close stdout (aka stop printing to screen)
+                    int r;
+                    r = close(STDOUT_FILENO);   // STDOUT_FILENO = 1. aka close(1)
+                    if (r == -1) {
+                        perror("close:");
+                        return -1;
+                    }
         
+                    // open() opens new text file
+                    // O_WRONLY gives user write permissions to file
+                    // O_CREAT will create the file if file name doesn't exist
+
+                    // out is the file directory number of the output file (used in dup2)
                     int out = open(out_file_name, O_WRONLY | O_CREAT);
                     if (out == -1) {
                         perror("open:");
                         return -1;
                     }
-                    int r;
-                    fflush(stdout);
-                    dup2(out, STDOUT_FILENO);
                     
+                    // dup2 'redirects' stdout file directory number to output file file directory number
+                    // (aka, make printf print to file instead of screen)
+                    r = dup2(out, STDOUT_FILENO);
+                    if (r == -1) {
+                        perror("dup2:");
+                        return -1;
+                    }
                     *redir_location = '\0';
-                    // printf("line: %s\n", line);
-                }
-                int command_size = getCommandSize(line);
+                }   
 
+                // RUN NON BUILT-IN COMMAND
+                int command_size = getNumberOfPaths(line);
+    
                 char *myargs[command_size + 2];
-                getArgList(myargs, line, command_size);
-
+                getEachPath(myargs, line, command_size);
+    
                 if(newCommand(myargs))
                 {
-                    char error_message[30] = "An error has occurred.\n";
+                    write(STDERR_FILENO, error_message, strlen(error_message));
+                    exit(0);
                 }
             }
             else 
@@ -186,29 +231,8 @@ int main(int argc, char **argv)
     {
         err(1, "getline");
     }
-    exit(1);
 }
 
-int getCommandSize(char *line)
-{
-    int command_size = 0;
-    for(int i = 0; i < strlen(line); i++)
-    {
-        if(line[i] == ' ') command_size++;
-    }
-    return command_size;
-}
-void getArgList(char *argList[], char *line, int command_size)
-{
-    char *temp;
-    temp = strtok(line, " ");
-    for(int j = 0; j <= command_size; j++)
-    {
-        argList[j] = temp;
-        temp = strtok(NULL, " ");
-    }
-    argList[command_size + 1] = NULL;
-}
 
 int getNumberOfPaths(char *line)
 {
@@ -230,6 +254,29 @@ void getEachPath(char *argList[], char *line, int command_size)
         temp = strtok(NULL, " ");
     }
     argList[command_size + 1] = NULL;
+}
+
+void getParallelCommands(char *commandList[], char *line, int command_size)
+{
+    char *temp;
+    temp = strtok(line, "&");
+    for(int j = 0; j <= command_size; j++)
+    {
+        if(temp[0] == ' ') temp += 1;
+        commandList[j] = temp;
+        temp = strtok(NULL, "&");
+    }
+    commandList[command_size + 1] = NULL;    
+}
+
+int getNumberOfParallelCommands(char *line)
+{
+    int command_size = 0;
+    for(int i = 0; i < strlen(line); i++)
+    {
+        if(line[i] == '&') command_size++;
+    }
+    return command_size;
 }
 
 int newCommand(char *paths[])
