@@ -134,7 +134,6 @@ int main(int argc, char **argv)
             else if (rc == 0) 
             {
                 char *redir_location;
-                char *parallel_location;
                 
                 // IT IS CHILD PROCESS
 
@@ -165,10 +164,11 @@ int main(int argc, char **argv)
                 //             redir_location   = '> output.txt'
                 if((redir_location = strchr(line, '>')) != NULL)
                 {
+                    
                     char *out_file_name;
                     // FROM EX) out_file_name = 'output.txt'
+                    redir_location += 2;
                     strcpy(out_file_name, redir_location);
-                    out_file_name += 2;
         
                     printf("outfile: %s\n", out_file_name);
 
@@ -198,6 +198,7 @@ int main(int argc, char **argv)
                         perror("dup2:");
                         return -1;
                     }
+                    redir_location -= 2;
                     *redir_location = '\0';
                 }   
 
